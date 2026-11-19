@@ -1,0 +1,9 @@
+.env
+node_modules/
+dist/
+coverage/
+
+.nx/polygraph
+.nx/
+.claude/worktrees
+.claude/settings.local.json
