@@ -17,12 +17,12 @@ export class CreateSolutionDto {
   @Min(1)
   userId!: number;
 
-  @IsBoolean()
-  passed!: boolean;
+  // @IsBoolean()
+  // passed!: boolean;
 
-  @IsInt()
-  @Min(0)
-  execMs!: number;
+  // @IsInt()
+  // @Min(0)
+  // execMs!: number;
 
   @IsString()
   @IsNotEmpty()
@@ -30,8 +30,9 @@ export class CreateSolutionDto {
   language!: string;
 
   @IsString()
-  @IsNotEmpty()
-  codeS3Url!: string;
+  @IsOptional()
+  // @IsNotEmpty()
+  codeS3Url?: string;
 }
 
 export class UpdateSolutionDto {

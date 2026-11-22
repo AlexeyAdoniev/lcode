@@ -12,7 +12,7 @@ import {
 } from '@nestjs/common';
 import { PaginationQueryDto } from '@lcode/pagination';
 import { CreateSolutionDto, UpdateSolutionDto } from './solution.dto';
-import { Solution } from './solution.entity';
+import { CreateSolutionResponse, Solution } from './solution.entity';
 import { SolutionService } from './solution.service';
 
 @Controller('solutions')
@@ -21,7 +21,7 @@ export class SolutionController {
 
   @Post()
   @HttpCode(200)
-  create(@Body() dto: CreateSolutionDto): Promise<Solution> {
+  create(@Body() dto: CreateSolutionDto): Promise<CreateSolutionResponse> {
     return this.solutions.create(dto);
   }
 

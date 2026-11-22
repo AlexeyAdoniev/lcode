@@ -1,5 +1,7 @@
 const { Pool } = require('pg');
 
+
+//docker compose exec api yarn db:seed 
 const pool = new Pool({
   host: process.env.POSTGRES_HOST ?? 'localhost',
   port: Number(process.env.POSTGRES_PORT ?? 5432),
@@ -26,15 +28,18 @@ async function seed() {
       )
     `);
 
+
+    //await pool.query('DROP TABLE solutions');
+
     await pool.query(`
       CREATE TABLE IF NOT EXISTS solutions (
         id SERIAL PRIMARY KEY,
         problem_id INTEGER NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        passed BOOLEAN NOT NULL,
-        exec_ms INTEGER NOT NULL CHECK (exec_ms >= 0),
+        passed BOOLEAN,
+        exec_ms INTEGER CHECK (exec_ms >= 0),
         language VARCHAR(100) NOT NULL,
-        codeS3Url TEXT NOT NULL
+        codeS3Url TEXT
       )
     `);
   } finally {

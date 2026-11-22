@@ -35,7 +35,7 @@ no need for that now, also don't run any runtime checks using curl, node, docker
 Use two-space indentation, single quotes, semicolons, and trailing commas in multiline constructs. Use PascalCase for classes/interfaces, camelCase for functions and variables, and ALL_CAPS for constants. Prefix booleans with is, has, can, or should; include units such as timeoutMs.
 
 ## Best Practices
-Use const by default and never var; use strict equality. Keep functions small, avoid deeply nested control flow, and do not mutate inputs or use arguments. Keep code self-documenting, adding comments only for non-obvious decisions. Represent missing values explicitly under strict TypeScript options.
+Use const by default and never var; use strict equality. Keep functions small, avoid deeply nested control flow, and do not mutate inputs or use arguments. Keep code self-documenting, adding comments only for non-obvious decisions. Represent missing values explicitly under strict TypeScript options. keep existing comments in code
 
 ## Optimization Guidelines
 Choose collections deliberately: use Map for dynamic dictionaries, Set for large or frequently queried collections, and arrays for short lists. Prefer fixed property access. Keep hot functions monomorphic with stable argument and return types, initialize object fields consistently, and reuse allocations only when ownership and correctness remain clear.
@@ -71,3 +71,4 @@ Choose collections deliberately: use Map for dynamic dictionaries, Set for large
     `apps/` - nx projects (future microserives)
     `apps/[app]/src/domain` - main business logic (BL)
     `libs` - code that may be reused across apps
+

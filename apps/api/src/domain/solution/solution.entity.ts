@@ -7,3 +7,8 @@ export type Solution = {
   language: string;
   codeS3Url: string;
 };
+
+export type CreateSolutionResponse = {
+  solution: Solution;
+  s3PresignedUrl: string;
+};

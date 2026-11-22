@@ -1,33 +1,63 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { DatabasePool } from '../../../db/pool';
 import { CreateSolutionDto, UpdateSolutionDto } from './solution.dto';
-import { Solution } from './solution.entity';
+import { CreateSolutionResponse, Solution } from './solution.entity';
+import { S3_CLIENT, S3_CONFIG, S3Config } from './s3.config';
+
+const S3_PRESIGNED_URL_EXPIRES_IN_SECONDS = 15 * 60;
 
 @Injectable()
 export class SolutionService {
-  constructor(private readonly pool: DatabasePool) { }
+  constructor(
+    private readonly pool: DatabasePool,
+    @Inject(S3_CONFIG) private readonly s3Config: S3Config,
+    @Inject(S3_CLIENT) private readonly s3Client: S3Client,
+  ) {}
 
-  async create(dto: CreateSolutionDto): Promise<Solution> {
+  async create(dto: CreateSolutionDto): Promise<CreateSolutionResponse> {
     const result = await this.pool.query<Solution>(
-      `INSERT INTO solutions (problem_id, user_id, passed, exec_ms, language, code)
-       VALUES ($1, $2, $3, $4, $5, $6)
+      `INSERT INTO solutions (problem_id, user_id, language, codeS3Url)
+       VALUES ($1, $2, $3, $4)
        RETURNING id,
                  problem_id AS "problemId",
                  user_id AS "userId",
-                 passed,
-                 exec_ms AS "execMs",
                  language,
-                 code`,
+                 codeS3Url AS "codeS3Url"`,
       [
         dto.problemId,
         dto.userId,
-        dto.passed,
-        dto.execMs,
         dto.language,
         dto.codeS3Url,
       ],
     );
-    return result.rows[0];
+    const solution = result.rows[0];
+    const key = `solutions/${solution.id}/source`;
+    const codeS3Url = `s3://${this.s3Config.bucket}/${key}`;
+
+    await this.pool.query(
+      'UPDATE solutions SET codeS3Url = $2 WHERE id = $1',
+      [solution.id, codeS3Url],
+    );
+
+    const s3PresignedUrl = await getSignedUrl(
+      this.s3Client,
+      new PutObjectCommand({
+        Bucket: this.s3Config.bucket,
+        Key: key,
+      }),
+      { expiresIn: S3_PRESIGNED_URL_EXPIRES_IN_SECONDS },
+    );
+
+    return {
+      solution: {
+        ...solution,
+        codeS3Url,
+      },
+      s3PresignedUrl,
+    };
   }
 
   async findAll(page: number, perPage: number): Promise<Solution[]> {
@@ -39,7 +69,7 @@ export class SolutionService {
               passed,
               exec_ms AS "execMs",
               language,
-              code
+              codeS3Url AS "codeS3Url"
        FROM solutions
        ORDER BY id
        LIMIT $1 OFFSET $2`,
@@ -56,7 +86,7 @@ export class SolutionService {
               passed,
               exec_ms AS "execMs",
               language,
-              code
+              codeS3Url AS "codeS3Url"
        FROM solutions
        WHERE id = $1`,
       [id],
@@ -75,7 +105,7 @@ export class SolutionService {
            passed = COALESCE($4, passed),
            exec_ms = COALESCE($5, exec_ms),
            language = COALESCE($6, language),
-           code = COALESCE($7, code)
+           codeS3Url = COALESCE($7, codeS3Url)
        WHERE id = $1
        RETURNING id,
                  problem_id AS "problemId",
@@ -83,7 +113,7 @@ export class SolutionService {
                  passed,
                  exec_ms AS "execMs",
                  language,
-                 code`,
+                 codeS3Url AS "codeS3Url"`,
       [
         id,
         dto.problemId ?? null,
