@@ -1,7 +1,13 @@
 import { Module } from '@nestjs/common';
+import {
+  createS3Client,
+  createS3Config,
+  S3_CLIENT,
+  S3_CONFIG,
+} from '@lcode/s3';
 import { DatabaseModule } from '../../../db/database.module';
 import { SolutionController } from './solution.controller';
-import { createS3Client, createS3Config, S3_CLIENT, S3_CONFIG } from './s3.config';
+import { SolutionEventsPublisher } from './solution-events.publisher';
 import { SolutionService } from './solution.service';
 
 @Module({
@@ -10,13 +16,17 @@ import { SolutionService } from './solution.service';
   providers: [
     {
       provide: S3_CONFIG,
-      useFactory: createS3Config,
+      useFactory: () =>
+        createS3Config({
+          endpoint: process.env.S3_PUBLIC_ENDPOINT ?? process.env.S3_ENDPOINT,
+        }),
     },
     {
       provide: S3_CLIENT,
       useFactory: createS3Client,
       inject: [S3_CONFIG],
     },
+    SolutionEventsPublisher,
     SolutionService,
   ],
 })

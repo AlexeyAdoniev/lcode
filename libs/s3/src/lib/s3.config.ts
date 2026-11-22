@@ -8,18 +8,23 @@ export type S3Config = {
   clientConfig: S3ClientConfig;
 };
 
-export function createS3Config(): S3Config {
+export type CreateS3ConfigOptions = {
+  endpoint?: string;
+};
+
+export function createS3Config(options: CreateS3ConfigOptions = {}): S3Config {
   const accessKeyId = process.env.S3_ACCESS_KEY_ID;
   const secretAccessKey = process.env.S3_SECRET_ACCESS_KEY;
-  const credentials = accessKeyId && secretAccessKey
-    ? { accessKeyId, secretAccessKey }
-    : undefined;
+  const credentials =
+    accessKeyId && secretAccessKey
+      ? { accessKeyId, secretAccessKey }
+      : undefined;
 
   return {
     bucket: process.env.S3_BUCKET ?? 'lcode',
     clientConfig: {
       region: process.env.S3_REGION ?? 'us-east-1',
-      endpoint: process.env.S3_PUBLIC_ENDPOINT ?? process.env.S3_ENDPOINT,
+      endpoint: options.endpoint ?? process.env.S3_ENDPOINT,
       forcePathStyle: process.env.S3_FORCE_PATH_STYLE === 'true',
       credentials,
     },

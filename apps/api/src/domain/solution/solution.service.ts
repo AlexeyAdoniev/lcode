@@ -2,10 +2,11 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PutObjectCommand } from '@aws-sdk/client-s3';
 import type { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { S3_CLIENT, S3_CONFIG, S3Config } from '@lcode/s3';
 import { DatabasePool } from '../../../db/pool';
 import { CreateSolutionDto, UpdateSolutionDto } from './solution.dto';
 import { CreateSolutionResponse, Solution } from './solution.entity';
-import { S3_CLIENT, S3_CONFIG, S3Config } from './s3.config';
+import { SolutionEventsPublisher } from './solution-events.publisher';
 
 const S3_PRESIGNED_URL_EXPIRES_IN_SECONDS = 15 * 60;
 
@@ -15,6 +16,7 @@ export class SolutionService {
     private readonly pool: DatabasePool,
     @Inject(S3_CONFIG) private readonly s3Config: S3Config,
     @Inject(S3_CLIENT) private readonly s3Client: S3Client,
+    private readonly solutionEvents: SolutionEventsPublisher,
   ) {}
 
   async create(dto: CreateSolutionDto): Promise<CreateSolutionResponse> {
@@ -50,6 +52,8 @@ export class SolutionService {
       }),
       { expiresIn: S3_PRESIGNED_URL_EXPIRES_IN_SECONDS },
     );
+
+    await this.solutionEvents.publishCreated(solution.id);
 
     return {
       solution: {

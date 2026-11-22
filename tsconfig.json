@@ -11,7 +11,9 @@
     "strict": true,
     "skipLibCheck": true,
     "paths": {
-      "@lcode/pagination": ["./libs/pagination/src/index.ts"]
+      "@lcode/pagination": ["./libs/pagination/src/index.ts"],
+      "@lcode/s3": ["./libs/s3/src/index.ts"],
+      "@lcode/messaging": ["./libs/messaging/src/index.ts"]
     }
   },
   "include": ["apps/**/*.ts", "libs/**/*.ts"]
