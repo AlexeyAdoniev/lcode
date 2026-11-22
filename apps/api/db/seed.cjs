@@ -8,7 +8,6 @@ const pool = new Pool({
   database: process.env.POSTGRES_DB,
 });
 
-
 async function seed() {
   try {
     await pool.query(`
@@ -24,6 +23,18 @@ async function seed() {
         name TEXT NOT NULL,
         description TEXT NOT NULL,
         tests JSONB NOT NULL DEFAULT '[]'::jsonb
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS solutions (
+        id SERIAL PRIMARY KEY,
+        problem_id INTEGER NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        passed BOOLEAN NOT NULL,
+        exec_ms INTEGER NOT NULL CHECK (exec_ms >= 0),
+        language VARCHAR(100) NOT NULL,
+        codeS3Url TEXT NOT NULL
       )
     `);
   } finally {
