@@ -13,7 +13,7 @@ Backend for leetcode like site
 - show PCT leaderbpard
 
 ## Entities 
- User {name, password}, 
+ User {username}, 
  Problem { name, description, tests: [{inputs[], output}] }, 
  Solution {problemId, userId, passed, execMs, language, code}, 
  Contest {problems[{ id, score}], startDate, endDate}

@@ -1,5 +1,7 @@
-import { Module, Controller, Get } from '@nestjs/common';
-
+import { Controller, Get, Module } from '@nestjs/common';
+import { AuthModule } from './auth/auth.module';
+import { ProblemModule } from './domain/problem/problem.module';
+import { UserModule } from './domain/user/user.module';
 
 @Controller()
 export class AppController {
@@ -10,6 +12,7 @@ export class AppController {
 }
 
 @Module({
+  imports: [AuthModule, ProblemModule, UserModule],
   controllers: [AppController],
 })
 export class AppModule {}
