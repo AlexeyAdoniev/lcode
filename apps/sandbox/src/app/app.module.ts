@@ -5,8 +5,9 @@ import {
   S3_CLIENT,
   S3_CONFIG,
 } from '@lcode/s3';
-import { SolutionCreatedConsumer } from '../kafka/solution-created.consumer';
+import { SolutionReadyConsumer } from '../kafka/solution-ready.consumer';
 import { SolutionSourceService } from '../solution-source/solution-source.service';
+import { SolutionExecutorService } from '../solution-source/solution-executor.service';
 
 @Module({
   imports: [],
@@ -24,7 +25,8 @@ import { SolutionSourceService } from '../solution-source/solution-source.servic
       inject: [S3_CONFIG],
     },
     SolutionSourceService,
-    SolutionCreatedConsumer,
+    SolutionReadyConsumer,
+    SolutionExecutorService
   ],
 })
-export class AppModule {}
+export class AppModule { }

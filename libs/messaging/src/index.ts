@@ -1,2 +1,2 @@
 export * from './lib/kafka';
-export * from './lib/solution-created.event';
+export * from './lib/solution-ready.event';

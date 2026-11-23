@@ -25,6 +25,12 @@ export class SolutionController {
     return this.solutions.create(dto);
   }
 
+  @Post(':id/upload-complete')
+  @HttpCode(200)
+  completeUpload(@Param('id', ParseIntPipe) id: number): Promise<Solution> {
+    return this.solutions.completeUpload(id);
+  }
+
   @Get()
   findAll(@Query() query: PaginationQueryDto): Promise<Solution[]> {
     return this.solutions.findAll(query.page ?? 1, query.perPage ?? 20);

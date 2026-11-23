@@ -30,6 +30,10 @@ async function seed() {
 
 
     //await pool.query('DROP TABLE solutions');
+    // await pool.query(`
+    //   ALTER TABLE solutions
+    //   ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'pending_upload'
+    // `);
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS solutions (
@@ -39,9 +43,11 @@ async function seed() {
         passed BOOLEAN,
         exec_ms INTEGER CHECK (exec_ms >= 0),
         language VARCHAR(100) NOT NULL,
-        codeS3Url TEXT
+        codeS3Url TEXT,
+        status VARCHAR(32) NOT NULL DEFAULT 'pending_upload'
       )
     `);
+
   } finally {
     await pool.end();
   }

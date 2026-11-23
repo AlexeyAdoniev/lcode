@@ -1,12 +1,22 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
-import { PutObjectCommand } from '@aws-sdk/client-s3';
+import {
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import { HeadObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 import type { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { S3_CLIENT, S3_CONFIG, S3Config } from '@lcode/s3';
 import { DatabasePool } from '../../../db/pool';
 import { CreateSolutionDto, UpdateSolutionDto } from './solution.dto';
-import { CreateSolutionResponse, Solution } from './solution.entity';
+import {
+  CreateSolutionResponse,
+  Solution,
+  SOLUTION_STATUS,
+} from './solution.entity';
 import { SolutionEventsPublisher } from './solution-events.publisher';
+import { S3_PRESIGN_CLIENT } from './solution.tokens';
 
 const S3_PRESIGNED_URL_EXPIRES_IN_SECONDS = 15 * 60;
 
@@ -16,44 +26,45 @@ export class SolutionService {
     private readonly pool: DatabasePool,
     @Inject(S3_CONFIG) private readonly s3Config: S3Config,
     @Inject(S3_CLIENT) private readonly s3Client: S3Client,
+    @Inject(S3_PRESIGN_CLIENT) private readonly s3PresignClient: S3Client,
     private readonly solutionEvents: SolutionEventsPublisher,
   ) {}
 
   async create(dto: CreateSolutionDto): Promise<CreateSolutionResponse> {
     const result = await this.pool.query<Solution>(
-      `INSERT INTO solutions (problem_id, user_id, language, codeS3Url)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO solutions (problem_id, user_id, language, codeS3Url, status)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING id,
                  problem_id AS "problemId",
                  user_id AS "userId",
                  language,
-                 codeS3Url AS "codeS3Url"`,
+                 codeS3Url AS "codeS3Url",
+                 status`,
       [
         dto.problemId,
         dto.userId,
         dto.language,
         dto.codeS3Url,
+        SOLUTION_STATUS.PENDING_UPLOAD,
       ],
     );
     const solution = result.rows[0];
     const key = `solutions/${solution.id}/source`;
     const codeS3Url = `s3://${this.s3Config.bucket}/${key}`;
 
-    await this.pool.query(
-      'UPDATE solutions SET codeS3Url = $2 WHERE id = $1',
-      [solution.id, codeS3Url],
-    );
+    await this.pool.query('UPDATE solutions SET codeS3Url = $2 WHERE id = $1', [
+      solution.id,
+      codeS3Url,
+    ]);
 
     const s3PresignedUrl = await getSignedUrl(
-      this.s3Client,
+      this.s3PresignClient,
       new PutObjectCommand({
         Bucket: this.s3Config.bucket,
         Key: key,
       }),
       { expiresIn: S3_PRESIGNED_URL_EXPIRES_IN_SECONDS },
     );
-
-    await this.solutionEvents.publishCreated(solution.id);
 
     return {
       solution: {
@@ -62,6 +73,32 @@ export class SolutionService {
       },
       s3PresignedUrl,
     };
+  }
+
+  async completeUpload(id: number): Promise<Solution> {
+    const solution = await this.findOne(id);
+    if (solution.status === SOLUTION_STATUS.READY) {
+      return solution;
+    }
+
+    await this.assertSourceExists(id);
+    await this.solutionEvents.publishReady(id);
+
+    const result = await this.pool.query<Solution>(
+      `UPDATE solutions
+       SET status = $2
+       WHERE id = $1 AND status = $3
+       RETURNING id,
+                 problem_id AS "problemId",
+                 user_id AS "userId",
+                 passed,
+                 exec_ms AS "execMs",
+                 language,
+                 codeS3Url AS "codeS3Url",
+                 status`,
+      [id, SOLUTION_STATUS.READY, SOLUTION_STATUS.PENDING_UPLOAD],
+    );
+    return result.rows[0] ?? this.findOne(id);
   }
 
   async findAll(page: number, perPage: number): Promise<Solution[]> {
@@ -73,7 +110,8 @@ export class SolutionService {
               passed,
               exec_ms AS "execMs",
               language,
-              codeS3Url AS "codeS3Url"
+              codeS3Url AS "codeS3Url",
+              status
        FROM solutions
        ORDER BY id
        LIMIT $1 OFFSET $2`,
@@ -90,7 +128,8 @@ export class SolutionService {
               passed,
               exec_ms AS "execMs",
               language,
-              codeS3Url AS "codeS3Url"
+              codeS3Url AS "codeS3Url",
+              status
        FROM solutions
        WHERE id = $1`,
       [id],
@@ -117,7 +156,8 @@ export class SolutionService {
                  passed,
                  exec_ms AS "execMs",
                  language,
-                 codeS3Url AS "codeS3Url"`,
+                 codeS3Url AS "codeS3Url",
+                 status`,
       [
         id,
         dto.problemId ?? null,
@@ -142,5 +182,40 @@ export class SolutionService {
     if (result.rowCount === 0) {
       throw new NotFoundException('Solution not found');
     }
+  }
+
+  private async assertSourceExists(solutionId: number): Promise<void> {
+    try {
+      await this.s3Client.send(
+        new HeadObjectCommand({
+          Bucket: this.s3Config.bucket,
+          Key: `solutions/${solutionId}/source`,
+        }),
+      );
+    } catch (error: unknown) {
+      if (this.isNotFound(error)) {
+        throw new ConflictException(
+          'Solution source file has not been uploaded',
+        );
+      }
+
+      throw error;
+    }
+  }
+
+  private isNotFound(error: unknown): boolean {
+    if (!error || typeof error !== 'object') {
+      return false;
+    }
+
+    const s3Error = error as {
+      name?: string;
+      $metadata?: { httpStatusCode?: number };
+    };
+    return (
+      s3Error.name === 'NotFound' ||
+      s3Error.name === 'NoSuchKey' ||
+      s3Error.$metadata?.httpStatusCode === 404
+    );
   }
 }

@@ -25,7 +25,9 @@ services:
         condition: service_started
 
   sandbox:
-    build: .
+    build:
+      context: .
+      target: sandbox
     command: yarn nx serve sandbox
     env_file: .env
     environment:
@@ -35,6 +37,7 @@ services:
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
     volumes:
       - ./apps/sandbox/src:/app/apps/sandbox/src
+      - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       kafka:
         condition: service_healthy

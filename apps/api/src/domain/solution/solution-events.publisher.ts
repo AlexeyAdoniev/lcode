@@ -2,8 +2,8 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import {
   createKafka,
   ensureTopic,
-  serializeSolutionCreatedEvent,
-  SOLUTIONS_CREATE_TOPIC,
+  serializeSolutionReadyEvent,
+  SOLUTIONS_READY_TOPIC,
 } from '@lcode/messaging';
 import type { Producer } from 'kafkajs';
 
@@ -15,7 +15,7 @@ export class SolutionEventsPublisher implements OnModuleInit, OnModuleDestroy {
   private readonly producer: Producer = this.kafka.producer();
 
   async onModuleInit(): Promise<void> {
-    await ensureTopic(this.kafka, SOLUTIONS_CREATE_TOPIC);
+    await ensureTopic(this.kafka, SOLUTIONS_READY_TOPIC);
     await this.producer.connect();
   }
 
@@ -23,14 +23,13 @@ export class SolutionEventsPublisher implements OnModuleInit, OnModuleDestroy {
     await this.producer.disconnect();
   }
 
-  async publishCreated(solutionId: number): Promise<void> {
-    console.log('published creation');
+  async publishReady(solutionId: number): Promise<void> {
     await this.producer.send({
-      topic: SOLUTIONS_CREATE_TOPIC,
+      topic: SOLUTIONS_READY_TOPIC,
       messages: [
         {
           key: String(solutionId),
-          value: serializeSolutionCreatedEvent({ solutionId }),
+          value: serializeSolutionReadyEvent({ solutionId }),
         },
       ],
     });
