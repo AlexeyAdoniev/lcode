@@ -51,21 +51,21 @@ export class SolutionReadyConsumer implements OnModuleInit, OnModuleDestroy {
       const [source, apiResponse] = await Promise.all([this.solutionSource.fetch(event.solutionId), this.apiClient.getProblemTests(event.problemId)])
       //console.log(problemTests, 'problemTests');
       const problemTests = JSON.parse(apiResponse.testsJson);
-      const inputs = problemTests[0].inputs[0] as any[];
-      const outputs = problemTests[0].outputs[0].map(String) as string[];
-      // console.log(inputs, 'inputs');
+      const inputs = problemTests[0].inputs[0] as unknown[];
+      const outputs = problemTests[0].outputs[0] as unknown[];
+      console.log(inputs, 'inputs');
       // console.log(outputs, 'outputs');
       const tm1 = Date.now();
-      const result = await this.executorSource.execute(source.toString('utf-8'), [inputs]);
+      const result = await this.executorSource.execute(event.language, source.toString('utf-8'), inputs);
 
+      this.logger.log(result, 'executor result');
 
       await this.apiClient.updateSolution({
         "solutionId": event.solutionId,
         execMs: Date.now() - tm1,
-        "passed": JSON.stringify(result.stdout.replaceAll(/\s+|\W+/g, '').split('')) === JSON.stringify(outputs),
+        "passed": JSON.stringify(result.stdout.replaceAll(/\s+|\W+/g, '').split('')) === JSON.stringify(outputs.map(String)),
         "status": "executed"
       });
-      //this.logger.log(result, 'executor result');
     } catch (error: unknown) {
       console.log(error, 'error');
       if (error instanceof Error) {

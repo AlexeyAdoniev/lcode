@@ -29,6 +29,9 @@ services:
     build:
       context: .
       target: sandbox
+      additional_contexts:
+        python_runner: service:python-runner
+        node_runner: service:node-runner
     command: yarn nx serve sandbox
     env_file: .env
     environment:
@@ -41,10 +44,28 @@ services:
       - ./apps/sandbox/src:/app/apps/sandbox/src
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
+      python-runner:
+        condition: service_completed_successfully
+      node-runner:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       minio:
         condition: service_started
+
+  python-runner:
+    image: python_runner:latest
+    build:
+      context: ./runners/python
+    # Only prepare the image; submissions get their own containers.
+    entrypoint: ['python', '-c', 'pass']
+
+  node-runner:
+    image: node_runner:latest
+    build:
+      context: ./runners/node
+    # Only prepare the image; submissions get their own containers.
+    entrypoint: ['node', '-e', '']
 
   postgres:
     image: postgres:17
