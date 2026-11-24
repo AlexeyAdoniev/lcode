@@ -32,6 +32,7 @@ services:
       additional_contexts:
         python_runner: service:python-runner
         node_runner: service:node-runner
+        go_runner: service:go-runner
     command: yarn nx serve sandbox
     env_file: .env
     environment:
@@ -47,6 +48,8 @@ services:
       python-runner:
         condition: service_completed_successfully
       node-runner:
+        condition: service_completed_successfully
+      go-runner:
         condition: service_completed_successfully
       kafka:
         condition: service_healthy
@@ -66,6 +69,13 @@ services:
       context: ./runners/node
     # Only prepare the image; submissions get their own containers.
     entrypoint: ['node', '-e', '']
+
+  go-runner:
+    image: go_runner:latest
+    build:
+      context: ./runners/go
+    # Only prepare the image; submissions get their own containers.
+    entrypoint: ['/bin/true']
 
   postgres:
     image: postgres:17

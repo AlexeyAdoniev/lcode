@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 
 const EXECUTION_TIMEOUT_MS = 3000;
-const DOCKER_CLIENT_TIMEOUT_MS = 4000;
+const DOCKER_CLIENT_GRACE_MS = 1000;
 const CLEANUP_TIMEOUT_MS = 1000;
 const MAX_OUTPUT_BYTES = 64 * 1024;
 
@@ -15,16 +15,48 @@ type ExecuteResult = {
 };
 
 
-const languageRunnerMapping = {
+type RunnerConfig = {
+  image: string;
+  entrypoint: string;
+  command: readonly string[];
+  executionTimeoutMs: number;
+  memoryMb: number;
+  cpus: number;
+  tmpfs: readonly string[];
+};
+
+const DEFAULT_RUNNER_OPTIONS = {
+  executionTimeoutMs: EXECUTION_TIMEOUT_MS,
+  memoryMb: 128,
+  cpus: 0.5,
+  tmpfs: ['/tmp:rw,noexec,nosuid,nodev,size=16m'],
+};
+
+const LANGUAGE_RUNNERS: Readonly<Record<string, RunnerConfig | undefined>> = {
   py: {
+    ...DEFAULT_RUNNER_OPTIONS,
     image: 'python_runner:latest',
     entrypoint: 'python',
     command: ['-I', '-B', '/runner/runner.py'],
   },
   js: {
+    ...DEFAULT_RUNNER_OPTIONS,
     image: 'node_runner:latest',
     entrypoint: 'node',
     command: ['/runner/runner.cjs'],
+  },
+  go: {
+    ...DEFAULT_RUNNER_OPTIONS,
+    image: 'go_runner:latest',
+    entrypoint: '/runner/runner',
+    command: [],
+    executionTimeoutMs: 60000,
+    memoryMb: 768,
+    cpus: 1,
+    tmpfs: [
+      ...DEFAULT_RUNNER_OPTIONS.tmpfs,
+      '/work:rw,exec,nosuid,nodev,size=512m,mode=1777',
+    ],
   },
 };
 
@@ -32,15 +64,16 @@ const languageRunnerMapping = {
 export class SolutionExecutorService {
   async execute(language: string, code: string, args: unknown[]): Promise<ExecuteResult> {
 
-    const runner = Object.prototype.hasOwnProperty.call(languageRunnerMapping, language)
-      ? languageRunnerMapping[language as keyof typeof languageRunnerMapping]
+    const runner = Object.prototype.hasOwnProperty.call(LANGUAGE_RUNNERS, language)
+      ? LANGUAGE_RUNNERS[language]
       : undefined;
 
-    if (!runner) throw new Error('unknown runner')
+    if (!runner) {
+      throw new Error(`Unknown runner: ${language}`);
+    }
 
     const request = JSON.stringify({ code, args: [`[${args}]`] });
-    console.log(code, 'code');
-    console.log([`[${args}]`], 'args');
+
     return new Promise((resolve, reject) => {
       const runName = `${randomUUID()}-container`;
 
@@ -58,7 +91,7 @@ export class SolutionExecutorService {
 
       const cleanupTimer = setTimeout(
         cleanupContainer,
-        EXECUTION_TIMEOUT_MS,
+        runner.executionTimeoutMs,
       );
 
       try {
@@ -74,17 +107,17 @@ export class SolutionExecutorService {
             '--cap-drop', 'ALL',
             '--security-opt', 'no-new-privileges=true',
             '--read-only',
-            '--tmpfs', '/tmp:rw,noexec,nosuid,nodev,size=16m',
+            ...runner.tmpfs.flatMap((mount) => ['--tmpfs', mount]),
             '--pids-limit', '32',
-            '--memory', '128m',
-            '--memory-swap', '128m',
-            '--cpus', '0.5',
+            '--memory', `${runner.memoryMb}m`,
+            '--memory-swap', `${runner.memoryMb}m`,
+            '--cpus', String(runner.cpus),
             '--entrypoint', runner.entrypoint,
             runner.image,
             ...runner.command,
           ],
           {
-            timeout: DOCKER_CLIENT_TIMEOUT_MS,
+            timeout: runner.executionTimeoutMs + DOCKER_CLIENT_GRACE_MS,
             maxBuffer: MAX_OUTPUT_BYTES,
           },
           (error, stdout, stderr) => {
