@@ -2,6 +2,8 @@ export const SOLUTIONS_READY_TOPIC = 'solutions.ready';
 
 export type SolutionReadyEvent = {
   solutionId: number;
+  problemId: number;
+  language: string;
 };
 
 export function serializeSolutionReadyEvent(event: SolutionReadyEvent): string {

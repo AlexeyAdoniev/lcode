@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package lcode;
+
+service SandboxApi {
+  rpc GetProblemTests (GetProblemTestsRequest) returns (GetProblemTestsResponse);
+  rpc UpdateSolution (UpdateSolutionRequest) returns (UpdateSolutionResponse);
+}
+
+message GetProblemTestsRequest {
+  int32 problem_id = 1;
+}
+
+message GetProblemTestsResponse {
+  // JSON encoding preserves the arbitrary shape of the jsonb tests column.
+  string tests_json = 1;
+}
+
+message UpdateSolutionRequest {
+  int32 solution_id = 1;
+  bool passed = 2;
+  double exec_ms = 3;
+  string status = 4;
+}
+
+message UpdateSolutionResponse {}

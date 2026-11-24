@@ -28,7 +28,7 @@ export class SolutionService {
     @Inject(S3_CLIENT) private readonly s3Client: S3Client,
     @Inject(S3_PRESIGN_CLIENT) private readonly s3PresignClient: S3Client,
     private readonly solutionEvents: SolutionEventsPublisher,
-  ) {}
+  ) { }
 
   async create(dto: CreateSolutionDto): Promise<CreateSolutionResponse> {
     const result = await this.pool.query<Solution>(
@@ -82,7 +82,7 @@ export class SolutionService {
     }
 
     await this.assertSourceExists(id);
-    await this.solutionEvents.publishReady(id);
+    await this.solutionEvents.publishReady(solution);
 
     const result = await this.pool.query<Solution>(
       `UPDATE solutions
@@ -141,6 +141,7 @@ export class SolutionService {
   }
 
   async update(id: number, dto: UpdateSolutionDto): Promise<Solution> {
+    console.log(dto, 'dto');
     const result = await this.pool.query<Solution>(
       `UPDATE solutions
        SET problem_id = COALESCE($2, problem_id),
@@ -148,7 +149,8 @@ export class SolutionService {
            passed = COALESCE($4, passed),
            exec_ms = COALESCE($5, exec_ms),
            language = COALESCE($6, language),
-           codeS3Url = COALESCE($7, codeS3Url)
+           codeS3Url = COALESCE($7, codeS3Url),
+           status = COALESCE($8, status)
        WHERE id = $1
        RETURNING id,
                  problem_id AS "problemId",
@@ -166,6 +168,7 @@ export class SolutionService {
         dto.execMs ?? null,
         dto.language ?? null,
         dto.codeS3Url ?? null,
+        dto.status ?? null
       ],
     );
     if (!result.rows[0]) {

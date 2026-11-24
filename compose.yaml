@@ -12,6 +12,7 @@ services:
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      API_GRPC_BIND_ADDRESS: 0.0.0.0:50051
     ports:
       - '127.0.0.1:${APP_PORT:-3000}:${APP_PORT:-3000}'
     volumes:
@@ -35,6 +36,7 @@ services:
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      API_GRPC_ADDRESS: api:50051
     volumes:
       - ./apps/sandbox/src:/app/apps/sandbox/src
       - /var/run/docker.sock:/var/run/docker.sock

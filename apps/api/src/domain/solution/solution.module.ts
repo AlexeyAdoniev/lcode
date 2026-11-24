@@ -12,6 +12,7 @@ import { SolutionService } from './solution.service';
 import { S3_PRESIGN_CLIENT } from './solution.tokens';
 
 @Module({
+  exports: [SolutionService],
   imports: [DatabaseModule],
   controllers: [SolutionController],
   providers: [

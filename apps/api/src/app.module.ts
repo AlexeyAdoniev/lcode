@@ -1,3 +1,4 @@
+import { SandboxApiServer } from './grpc/sandbox-api.server';
 import { Controller, Get, Module } from '@nestjs/common';
 import { AuthModule } from './auth/auth.module';
 import { ProblemModule } from './domain/problem/problem.module';
@@ -13,7 +14,8 @@ export class AppController {
 }
 
 @Module({
-  imports: [AuthModule, ProblemModule, SolutionModule, UserModule],
+  imports: [ AuthModule, ProblemModule, SolutionModule, UserModule],
   controllers: [AppController],
+  providers: [SandboxApiServer],
 })
 export class AppModule {}

@@ -6,6 +6,7 @@ import {
   SOLUTIONS_READY_TOPIC,
 } from '@lcode/messaging';
 import type { Producer } from 'kafkajs';
+import { Solution } from './solution.entity';
 
 @Injectable()
 export class SolutionEventsPublisher implements OnModuleInit, OnModuleDestroy {
@@ -23,13 +24,13 @@ export class SolutionEventsPublisher implements OnModuleInit, OnModuleDestroy {
     await this.producer.disconnect();
   }
 
-  async publishReady(solutionId: number): Promise<void> {
+  async publishReady(solution: Solution): Promise<void> {
     await this.producer.send({
       topic: SOLUTIONS_READY_TOPIC,
       messages: [
         {
-          key: String(solutionId),
-          value: serializeSolutionReadyEvent({ solutionId }),
+          key: String(solution.id),
+          value: serializeSolutionReadyEvent({ solutionId: solution.id, problemId: solution.problemId, language: solution.language }),
         },
       ],
     });

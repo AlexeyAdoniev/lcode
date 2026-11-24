@@ -1,3 +1,4 @@
+import { SandboxApiClient } from '../grpc/sandbox-api.client';
 import { Module } from '@nestjs/common';
 import {
   createS3Client,
@@ -12,6 +13,7 @@ import { SolutionExecutorService } from '../solution-source/solution-executor.se
 @Module({
   imports: [],
   providers: [
+    SandboxApiClient,
     {
       provide: S3_CONFIG,
       useFactory: () =>
@@ -26,7 +28,7 @@ import { SolutionExecutorService } from '../solution-source/solution-executor.se
     },
     SolutionSourceService,
     SolutionReadyConsumer,
-    SolutionExecutorService
+    SolutionExecutorService,
   ],
 })
 export class AppModule { }

@@ -10,11 +10,17 @@ const DOCKER_CLIENT_TIMEOUT_MS = 4000;
 const CLEANUP_TIMEOUT_MS = 1000;
 const MAX_OUTPUT_BYTES = 64 * 1024;
 
+type ExecuteResult = {
+    error: any,
+    stdout: string,
+    stderr: string
+}
+
 @Injectable()
 export class SolutionExecutorService {
 
 
-    async execute(code: string, args: string[] = ['5', '43']): Promise<unknown> {
+    async execute(code: string, args: any[]): Promise<ExecuteResult> {
 
         return new Promise((resolve, reject) => {
             try {

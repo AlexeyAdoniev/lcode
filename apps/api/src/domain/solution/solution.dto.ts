@@ -65,4 +65,9 @@ export class UpdateSolutionDto {
   @IsString()
   @IsNotEmpty()
   codeS3Url?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  status?: string;
 }
