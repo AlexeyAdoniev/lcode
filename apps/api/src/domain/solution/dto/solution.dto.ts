@@ -13,16 +13,14 @@ export class CreateSolutionDto {
   @Min(1)
   problemId!: number;
 
+
   @IsInt()
   @Min(1)
   userId!: number;
 
-  // @IsBoolean()
-  // passed!: boolean;
-
-  // @IsInt()
-  // @Min(0)
-  // execMs!: number;
+  @IsInt()
+  @Min(1)
+  contestId?: number;
 
   @IsString()
   @IsNotEmpty()

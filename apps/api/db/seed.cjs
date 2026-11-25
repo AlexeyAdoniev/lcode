@@ -29,11 +29,21 @@ async function seed() {
     `);
 
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS contests (
+        id SERIAL PRIMARY KEY,
+        problems JSONB NOT NULL DEFAULT '[]'::jsonb,
+        start_date TIMESTAMPTZ NOT NULL,
+        end_date TIMESTAMPTZ NOT NULL
+      )
+    `);
+
     //await pool.query('DROP TABLE solutions');
     // await pool.query(`
     //   ALTER TABLE solutions
-    //   ADD COLUMN IF NOT EXISTS status VARCHAR(32) NOT NULL DEFAULT 'pending_upload'
+    //   ADD COLUMN IF NOT EXISTS contest_id INTEGER REFERENCES contests(id)
     // `);
+
 
     await pool.query(`
       CREATE TABLE IF NOT EXISTS solutions (
@@ -44,10 +54,16 @@ async function seed() {
         exec_ms INTEGER CHECK (exec_ms >= 0),
         language VARCHAR(100) NOT NULL,
         codeS3Url TEXT,
-        status VARCHAR(32) NOT NULL DEFAULT 'pending_upload'
-      )
-    `);
+        status VARCHAR(32) NOT NULL DEFAULT 'pending_upload',
+        contest_id INTEGER REFERENCES contests(id)
+        )
+        `);
 
+    await pool.query(`
+            CREATE INDEX idx_solutions_contest_passed_user_problem
+    ON solutions (contest_id, user_id, problem_id)
+    WHERE passed = TRUE;
+          `);
   } finally {
     await pool.end();
   }

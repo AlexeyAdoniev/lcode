@@ -6,7 +6,7 @@ import {
   SOLUTIONS_READY_TOPIC,
 } from '@lcode/messaging';
 import type { Producer } from 'kafkajs';
-import { Solution } from './solution.entity';
+import { Solution } from '../entities/solution.entity';
 
 @Injectable()
 export class SolutionEventsPublisher implements OnModuleInit, OnModuleDestroy {

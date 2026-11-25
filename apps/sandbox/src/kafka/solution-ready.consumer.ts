@@ -14,6 +14,7 @@ import type { Consumer, KafkaMessage } from 'kafkajs';
 import { SolutionSourceService } from '../solution-source/solution-source.service';
 import { SolutionExecutorService } from '../solution-source/solution-executor.service';
 import { SandboxApiClient } from '../grpc/sandbox-api.client';
+import { smartEqual } from '../helpers';
 
 @Injectable()
 export class SolutionReadyConsumer implements OnModuleInit, OnModuleDestroy {
@@ -54,7 +55,7 @@ export class SolutionReadyConsumer implements OnModuleInit, OnModuleDestroy {
       const inputs = problemTests[0].inputs[0] as unknown[];
       const outputs = problemTests[0].outputs[0] as unknown[];
       console.log(inputs, 'inputs');
-      // console.log(outputs, 'outputs');
+      console.log(outputs, 'outputs');
       const tm1 = Date.now();
       const result = await this.executorSource.execute(event.language, source.toString('utf-8'), inputs);
 
@@ -63,7 +64,7 @@ export class SolutionReadyConsumer implements OnModuleInit, OnModuleDestroy {
       await this.apiClient.updateSolution({
         "solutionId": event.solutionId,
         execMs: Date.now() - tm1,
-        "passed": JSON.stringify(result.stdout.replaceAll(/\s+|\W+/g, '').split('')) === JSON.stringify(outputs.map(String)),
+        "passed": smartEqual(result.stdout, outputs),
         "status": "executed"
       });
     } catch (error: unknown) {

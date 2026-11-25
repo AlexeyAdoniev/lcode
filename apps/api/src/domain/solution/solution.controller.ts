@@ -11,13 +11,13 @@ import {
   Query,
 } from '@nestjs/common';
 import { PaginationQueryDto } from '@lcode/pagination';
-import { CreateSolutionDto, UpdateSolutionDto } from './solution.dto';
-import { CreateSolutionResponse, Solution } from './solution.entity';
+import { CreateSolutionDto, UpdateSolutionDto } from './dto/solution.dto';
+import { CreateSolutionResponse, Solution } from './entities/solution.entity';
 import { SolutionService } from './solution.service';
 
 @Controller('solutions')
 export class SolutionController {
-  constructor(private readonly solutions: SolutionService) {}
+  constructor(private readonly solutions: SolutionService) { }
 
   @Post()
   @HttpCode(200)

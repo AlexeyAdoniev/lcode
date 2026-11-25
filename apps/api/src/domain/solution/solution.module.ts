@@ -7,9 +7,9 @@ import {
 } from '@lcode/s3';
 import { DatabaseModule } from '../../../db/database.module';
 import { SolutionController } from './solution.controller';
-import { SolutionEventsPublisher } from './solution-events.publisher';
+import { SolutionEventsPublisher } from './events/solution-events.publisher';
 import { SolutionService } from './solution.service';
-import { S3_PRESIGN_CLIENT } from './solution.tokens';
+import { S3_PRESIGN_CLIENT } from './interfaces/solution.tokens';
 
 @Module({
   exports: [SolutionService],
@@ -41,4 +41,4 @@ import { S3_PRESIGN_CLIENT } from './solution.tokens';
     SolutionService,
   ],
 })
-export class SolutionModule {}
+export class SolutionModule { }

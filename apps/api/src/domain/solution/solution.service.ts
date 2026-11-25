@@ -9,14 +9,14 @@ import type { S3Client } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { S3_CLIENT, S3_CONFIG, S3Config } from '@lcode/s3';
 import { DatabasePool } from '../../../db/pool';
-import { CreateSolutionDto, UpdateSolutionDto } from './solution.dto';
+import { CreateSolutionDto, UpdateSolutionDto } from './dto/solution.dto';
 import {
   CreateSolutionResponse,
   Solution,
   SOLUTION_STATUS,
-} from './solution.entity';
-import { SolutionEventsPublisher } from './solution-events.publisher';
-import { S3_PRESIGN_CLIENT } from './solution.tokens';
+} from './entities/solution.entity';
+import { SolutionEventsPublisher } from './events/solution-events.publisher';
+import { S3_PRESIGN_CLIENT } from './interfaces/solution.tokens';
 
 const S3_PRESIGNED_URL_EXPIRES_IN_SECONDS = 15 * 60;
 
@@ -32,25 +32,31 @@ export class SolutionService {
 
   async create(dto: CreateSolutionDto): Promise<CreateSolutionResponse> {
     const result = await this.pool.query<Solution>(
-      `INSERT INTO solutions (problem_id, user_id, language, codeS3Url, status)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO solutions (problem_id, user_id, language, codeS3Url, status, contest_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING id,
                  problem_id AS "problemId",
                  user_id AS "userId",
                  language,
                  codeS3Url AS "codeS3Url",
-                 status`,
+                 status,
+                 contest_id AS "contestId"
+                 `,
+
       [
         dto.problemId,
         dto.userId,
         dto.language,
         dto.codeS3Url,
         SOLUTION_STATUS.PENDING_UPLOAD,
+        dto.contestId
       ],
     );
     const solution = result.rows[0];
     const key = `solutions/${solution.id}/source`;
     const codeS3Url = `s3://${this.s3Config.bucket}/${key}`;
+
+    //const contest = await this.pool.query<Contest>(``, [])
 
     await this.pool.query('UPDATE solutions SET codeS3Url = $2 WHERE id = $1', [
       solution.id,
@@ -220,5 +226,33 @@ export class SolutionService {
       s3Error.name === 'NoSuchKey' ||
       s3Error.$metadata?.httpStatusCode === 404
     );
+  }
+
+  async getLeaderboard(contestId: number) {
+    const result = await this.pool.query(`
+      WITH best_solutions AS (
+    SELECT DISTINCT ON (user_id, problem_id)
+        user_id,
+        problem_id,
+        contest_id
+    FROM solutions
+    WHERE contest_id = $1
+      AND passed = TRUE
+    ORDER BY user_id, problem_id
+)
+SELECT
+    s.user_id AS "userId",
+    u.name AS "username",
+    SUM((p->>'score')::numeric) AS "totalScore"
+FROM best_solutions s
+JOIN users u ON u.id = s.user_id
+JOIN contests c ON c.id = s.contest_id
+CROSS JOIN LATERAL jsonb_array_elements(c.problems) p
+WHERE (p->>'id')::int = s.problem_id
+GROUP BY s.user_id, u.name
+ORDER BY "totalScore" DESC, s.user_id ASC;
+`, [contestId]);
+
+    return result.rows;
   }
 }

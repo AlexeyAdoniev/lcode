@@ -25,7 +25,14 @@ Backend for leetcode like site
  GET /problems?page=&perPage= -> 200  Problems[]
  GET /problems/:id -> 200 or 404
  POST /solution/:problemId -> { code, language, contestId? } -> 200 Result or 500
+ POST /solutions/:id/upload-complete -> 200 or 404 or 500
  GET /leaderboard/:contestId?page=&perPage=
+
+## Solution Flow
+    User creates solution -> user uploads solution's code to s3like bucket -> user completes upload 
+    -> 'api' app publishes to 'solutions.ready' topic -> 'sandbox' consumes the event -> runs the code with right runner -> saves results
+
+
 
 ## Tests
 no need for that now, also don't run any runtime checks using curl, node, docker
@@ -71,4 +78,6 @@ Choose collections deliberately: use Map for dynamic dictionaries, Set for large
     `apps/` - nx projects (future microserives)
     `apps/[app]/src/domain` - main business logic (BL)
     `libs` - code that may be reused across apps
-
+    `runners` - docker configs and script runners for different programming languages (to run Solutions)
+    `proto` - protobufs
+ 
